@@ -1,0 +1,267 @@
+.calendar-shell {
+  position: relative;
+  margin-inline: auto;
+  max-width: 80rem;
+  overflow: hidden;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 2rem;
+  box-shadow: 0 30px 90px rgba(84, 64, 38, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.calendar-shell-topshade {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1.75rem;
+}
+
+.calendar-shell-layout {
+  display: grid;
+  gap: 0;
+}
+
+.calendar-panel {
+  position: relative;
+  padding: 1rem;
+}
+
+.calendar-panel-inner {
+  margin-top: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 1.75rem;
+  padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.calendar-binding {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  top: 1rem;
+  z-index: 10;
+  display: none;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-inline: 2rem;
+}
+
+.calendar-binding-ring {
+  width: 0.75rem;
+  height: 1.5rem;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.calendar-hero {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.calendar-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.calendar-hero-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.calendar-hero-ribbon {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 6.5rem;
+}
+
+.calendar-hero-content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem;
+}
+
+.calendar-hero-topbar {
+  padding-top: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.calendar-hero-badge {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 9999px;
+  padding: 0.25rem 1rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.calendar-hero-season-badge {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.calendar-hero-bottombar {
+  position: relative;
+  min-height: 12rem;
+  margin-bottom: 2rem;
+  top: 3rem;
+}
+
+.calendar-hero-quote {
+  position: absolute;
+  inset-inline: 0;
+  top: 2.5rem;
+  width: 100%;
+  max-width: none;
+}
+
+.calendar-hero-meta {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.calendar-hero-copy {
+  max-width: 24rem;
+}
+
+.calendar-hero-month-block {
+  position: relative;
+  top: 1rem;
+}
+
+.calendar-hero-description {
+  max-width: 20rem;
+  margin-top: 0.75rem;
+}
+
+.calendar-hero-year {
+  padding-bottom: 0.75rem;
+}
+
+.calendar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.calendar-header-copy {
+  padding-top: 0.5rem;
+}
+
+.calendar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  align-self: flex-start;
+}
+
+.calendar-header-button {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 9999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: 200ms;
+}
+
+@media (min-width: 640px) {
+  .calendar-panel {
+    padding: 1.5rem;
+  }
+
+  .calendar-panel-inner {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .calendar-binding {
+    display: flex;
+  }
+
+  .calendar-hero {
+    min-height: 860px;
+  }
+
+  .calendar-hero-ribbon {
+    height: 12rem;
+  }
+
+  .calendar-hero-content {
+    padding: 2rem;
+  }
+
+  .calendar-hero-topbar {
+    padding-top: 2rem;
+  }
+
+  .calendar-hero-badge {
+    font-size: 0.75rem;
+  }
+
+  .calendar-hero-bottombar {
+    min-height: 14rem;
+    top: 0;
+  }
+
+  .calendar-hero-meta {
+    align-items: flex-end;
+  }
+
+  .calendar-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .calendar-header-copy {
+    padding-top: 0.75rem;
+  }
+
+  .calendar-header-actions {
+    align-self: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-shell-layout {
+    grid-template-columns: 1.05fr 1.2fr;
+  }
+
+  .calendar-panel {
+    padding: 2rem;
+  }
+}
