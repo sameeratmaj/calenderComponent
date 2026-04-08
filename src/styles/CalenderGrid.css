@@ -38,6 +38,9 @@
   font-size: 0.875rem;
   font-weight: 600;
   transition: 200ms;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .calendar-grid-day:disabled {
