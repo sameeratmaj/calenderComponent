@@ -105,6 +105,7 @@ function Calendar() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isTouchHoldActive, setIsTouchHoldActive] = useState(false);
   const [tempRange, setTempRange] = useState(null);
   const [direction, setDirection] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
@@ -222,12 +223,28 @@ function Calendar() {
     }
   }, []);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    if (isDragging || isTouchHoldActive) {
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [isDragging, isTouchHoldActive]);
+
   const finalizeDragSelection = useCallback(() => {
     stopAutoPagination();
     stopTouchHoldTimer();
 
     if (!dragStartRef.current) {
       setIsDragging(false);
+      setIsTouchHoldActive(false);
       setTempRange(null);
       touchStartDateRef.current = null;
       touchOriginRef.current = null;
@@ -240,6 +257,7 @@ function Calendar() {
     setStartDate(finalRange.start);
     setEndDate(finalRange.end);
     setIsDragging(false);
+    setIsTouchHoldActive(false);
     setTempRange(null);
     dragStartRef.current = null;
     dragCurrentRef.current = null;
@@ -378,6 +396,7 @@ function Calendar() {
 
     const touch = event.touches[0];
     stopTouchHoldTimer();
+    setIsTouchHoldActive(true);
     touchStartDateRef.current = date;
     touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
 
@@ -396,10 +415,12 @@ function Calendar() {
     if (!touch) return;
 
     if (!isDragging && touchHoldTimerRef.current && touchOriginRef.current) {
+      event.preventDefault();
       const deltaX = touch.clientX - touchOriginRef.current.x;
       const deltaY = touch.clientY - touchOriginRef.current.y;
       if (Math.hypot(deltaX, deltaY) > 10) {
         stopTouchHoldTimer();
+        setIsTouchHoldActive(false);
         touchStartDateRef.current = null;
         touchOriginRef.current = null;
       }
@@ -414,6 +435,7 @@ function Calendar() {
 
   const handleTouchEnd = useCallback(() => {
     stopTouchHoldTimer();
+    setIsTouchHoldActive(false);
 
     if (isDragging) {
       finalizeDragSelection();
@@ -428,6 +450,7 @@ function Calendar() {
     stopTouchHoldTimer();
     stopAutoPagination();
     setIsDragging(false);
+    setIsTouchHoldActive(false);
     setTempRange(null);
     dragStartRef.current = null;
     dragCurrentRef.current = null;
@@ -449,7 +472,7 @@ function Calendar() {
       onTouchCancel={handleTouchCancel}
       style={{
         zoom: `${zoomLevel}%`,
-        touchAction: isDragging ? "none" : "manipulation",
+        touchAction: isDragging || isTouchHoldActive ? "none" : "manipulation",
       }}
     >
       <BindingRings />
