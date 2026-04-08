@@ -1,16 +1,75 @@
-# React + Vite
+# Wall Calendar Template
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A reusable React wall calendar component with:
 
-Currently, two official plugins are available:
+- paper-style calendar layout
+- seasonal hero image treatment
+- click range selection
+- desktop right-click drag range selection
+- touch long-press drag range selection
+- month/year jump dropdowns
+- monthly memos and range-based notes
+- `localStorage` persistence
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Project Structure
 
-## React Compiler
+```text
+src/
+  components/
+    Calendar.jsx
+    CalendarGrid.jsx
+    NotesSidebar.jsx
+  lib/
+    calendarConstants.js
+    calendarUtils.js
+  styles/
+    Calendar.css
+    CalendarGrid.css
+    NotesSidebar.css
+  index.js
+  App.jsx
+  App.css
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Reusable Entry
 
-## Expanding the ESLint configuration
+Use the exported component from [src/index.js](./src/index.js):
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```jsx
+import { Calendar } from "./src";
+
+export default function Example() {
+  return <Calendar />;
+}
+```
+
+## Demo Shell
+
+[src/App.jsx](./src/App.jsx) is only a demo wrapper for page positioning and background styling.
+The reusable calendar logic lives in:
+
+- [src/components/Calendar.jsx](./src/components/Calendar.jsx)
+- [src/components/CalendarGrid.jsx](./src/components/CalendarGrid.jsx)
+- [src/components/NotesSidebar.jsx](./src/components/NotesSidebar.jsx)
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+## Next Step For Publishing
+
+If you want to distribute this globally as a package, the next step would be:
+
+1. Move the demo app into an `example/` folder or separate app.
+2. Add prop-driven configuration for images, quotes, facts, storage, and timings.
+3. Add a library build entry in Vite for package output.
+4. Publish the component under a package name of your choice.

@@ -1,23 +1,18 @@
 import { memo } from "react";
-import "../styles/CalenderGrid.css";
+import {
+  formatLongDate,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  isWithinRange,
+  normalizeRange,
+  toISODate,
+} from "../lib/calendarUtils";
+import "../styles/CalendarGrid.css";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
-function CalenderGrid({
+function CalendarGrid({
   days,
   visibleMonth,
   seasonTheme,
@@ -59,8 +54,7 @@ function CalenderGrid({
           const middleRange = inRange && !isStart && !isEnd;
           const previewMiddleRange =
             inPreviewRange && !isPreviewStart && !isPreviewEnd && !middleRange;
-          const isPreviewEdge =
-            (isPreviewStart || isPreviewEnd) && !isStart && !isEnd;
+          const isPreviewEdge = (isPreviewStart || isPreviewEnd) && !isStart && !isEnd;
 
           return (
             <button
@@ -79,9 +73,7 @@ function CalenderGrid({
               }`}
               className={[
                 "calendar-grid-day focus:ring-2 focus:ring-offset-2",
-                inMonth
-                  ? "text-stone-800 calendar-grid-day-current"
-                  : "text-stone-300 opacity-55",
+                inMonth ? "text-stone-800 calendar-grid-day-current" : "text-stone-300 opacity-55",
                 middleRange || previewMiddleRange ? "rounded-none" : "",
                 previewMiddleRange ? "calendar-grid-day-preview" : "",
               ].join(" ")}
@@ -91,10 +83,10 @@ function CalenderGrid({
                   : previewMiddleRange
                     ? seasonTheme.soft
                     : isStart || isEnd
-                    ? seasonTheme.accent
-                    : isPreviewEdge
-                      ? seasonTheme.soft
-                    : "transparent",
+                      ? seasonTheme.accent
+                      : isPreviewEdge
+                        ? seasonTheme.soft
+                        : "transparent",
                 color: isStart || isEnd ? "#ffffff" : undefined,
                 borderTopLeftRadius:
                   (isStart && !isEnd) || (isPreviewStart && !isPreviewEnd && !isStart)
@@ -141,43 +133,4 @@ function CalenderGrid({
   );
 }
 
-function normalizeRange(first, second) {
-  return first <= second ? { start: first, end: second } : { start: second, end: first };
-}
-
-function isWithinRange(date, start, end) {
-  return stripTime(date) >= stripTime(start) && stripTime(date) <= stripTime(end);
-}
-
-function stripTime(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
-function isSameDay(first, second) {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
-}
-
-function isSameMonth(first, second) {
-  return first.getFullYear() === second.getFullYear() && first.getMonth() === second.getMonth();
-}
-
-function isToday(date) {
-  const today = new Date();
-  return isSameDay(date, today);
-}
-
-function formatLongDate(date) {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-}
-
-function toISODate(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
-}
-
-export default memo(CalenderGrid);
+export default memo(CalendarGrid);
