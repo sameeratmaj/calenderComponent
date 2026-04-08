@@ -1,3 +1,4 @@
+import { memo } from "react";
 import "../styles/CalenderGrid.css";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -16,8 +17,20 @@ const MONTH_NAMES = [
   "December",
 ];
 
-function CalenderGrid({ days, visibleMonth, seasonTheme, startDate, endDate, onDayClick }) {
-  const normalizedRange = startDate && endDate ? normalizeRange(startDate, endDate) : null;
+function CalenderGrid({
+  days,
+  visibleMonth,
+  seasonTheme,
+  startDate,
+  endDate,
+  previewRange,
+  onDayClick,
+  onDayMouseDown,
+  onDayMouseEnter,
+  onDayTouchStart,
+}) {
+  const finalizedRange = startDate && endDate ? normalizeRange(startDate, endDate) : null;
+  const activeRange = previewRange ?? finalizedRange;
 
   return (
     <div className="calendar-grid-shell border-stone-200/80">
@@ -34,45 +47,81 @@ function CalenderGrid({ days, visibleMonth, seasonTheme, startDate, endDate, onD
           const inMonth = isSameMonth(date, visibleMonth);
           const isStart = startDate ? isSameDay(date, startDate) : false;
           const isEnd = endDate ? isSameDay(date, endDate) : false;
+          const isPreviewStart = activeRange ? isSameDay(date, activeRange.start) : false;
+          const isPreviewEnd = activeRange ? isSameDay(date, activeRange.end) : false;
           const isTodayValue = isToday(date);
-          const inRange = normalizedRange
-            ? isWithinRange(date, normalizedRange.start, normalizedRange.end)
+          const inRange = finalizedRange
+            ? isWithinRange(date, finalizedRange.start, finalizedRange.end)
+            : false;
+          const inPreviewRange = activeRange
+            ? isWithinRange(date, activeRange.start, activeRange.end)
             : false;
           const middleRange = inRange && !isStart && !isEnd;
+          const previewMiddleRange =
+            inPreviewRange && !isPreviewStart && !isPreviewEnd && !middleRange;
+          const isPreviewEdge =
+            (isPreviewStart || isPreviewEnd) && !isStart && !isEnd;
 
           return (
             <button
               key={date.toISOString()}
               type="button"
               onClick={() => onDayClick(date)}
+              onMouseDown={(event) => onDayMouseDown(event, date)}
+              onMouseEnter={() => onDayMouseEnter(date)}
+              onTouchStart={(event) => onDayTouchStart(event, date)}
+              onContextMenu={(event) => event.preventDefault()}
+              data-calendar-date={toISODate(date)}
               disabled={!inMonth}
-              aria-pressed={inRange}
-              aria-label={`${formatLongDate(date)}${inRange ? ", selected" : ""}`}
+              aria-pressed={inRange || inPreviewRange}
+              aria-label={`${formatLongDate(date)}${
+                inPreviewRange ? ", selection preview" : inRange ? ", selected" : ""
+              }`}
               className={[
                 "calendar-grid-day focus:ring-2 focus:ring-offset-2",
                 inMonth
                   ? "text-stone-800 calendar-grid-day-current"
                   : "text-stone-300 opacity-55",
-                middleRange ? "rounded-none" : "",
+                middleRange || previewMiddleRange ? "rounded-none" : "",
+                previewMiddleRange ? "calendar-grid-day-preview" : "",
               ].join(" ")}
               style={{
                 backgroundColor: middleRange
                   ? seasonTheme.soft
-                  : isStart || isEnd
+                  : previewMiddleRange
+                    ? seasonTheme.soft
+                    : isStart || isEnd
                     ? seasonTheme.accent
+                    : isPreviewEdge
+                      ? seasonTheme.soft
                     : "transparent",
                 color: isStart || isEnd ? "#ffffff" : undefined,
-                borderTopLeftRadius: isStart && !isEnd ? "1rem" : undefined,
-                borderBottomLeftRadius: isStart && !isEnd ? "1rem" : undefined,
-                borderTopRightRadius: isEnd && !isStart ? "1rem" : undefined,
-                borderBottomRightRadius: isEnd && !isStart ? "1rem" : undefined,
+                borderTopLeftRadius:
+                  (isStart && !isEnd) || (isPreviewStart && !isPreviewEnd && !isStart)
+                    ? "1rem"
+                    : undefined,
+                borderBottomLeftRadius:
+                  (isStart && !isEnd) || (isPreviewStart && !isPreviewEnd && !isStart)
+                    ? "1rem"
+                    : undefined,
+                borderTopRightRadius:
+                  (isEnd && !isStart) || (isPreviewEnd && !isPreviewStart && !isEnd)
+                    ? "1rem"
+                    : undefined,
+                borderBottomRightRadius:
+                  (isEnd && !isStart) || (isPreviewEnd && !isPreviewStart && !isEnd)
+                    ? "1rem"
+                    : undefined,
                 "--tw-ring-color": seasonTheme.accent,
               }}
             >
-              {middleRange && (
+              {(middleRange || previewMiddleRange) && (
                 <span
                   className="absolute inset-y-1 -left-1 -right-1 rounded-md"
-                  style={{ backgroundColor: seasonTheme.soft }}
+                  style={{
+                    backgroundColor: seasonTheme.soft,
+                    opacity: previewMiddleRange ? 0.75 : 1,
+                  }}
                 />
               )}
 
@@ -125,4 +174,10 @@ function formatLongDate(date) {
   return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
-export default CalenderGrid;
+function toISODate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+export default memo(CalenderGrid);

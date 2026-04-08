@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import CalenderGrid from "./CalenderGrid";
@@ -104,12 +104,21 @@ function Calendar() {
 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [tempRange, setTempRange] = useState(null);
   const [direction, setDirection] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
   const [rangeNotes, setRangeNotes] = useState(() => readStorage("wall-calendar-range-notes"));
   const [monthMemos, setMonthMemos] = useState(() => readStorage("wall-calendar-month-memos"));
   const [draftMonthlyMemo, setDraftMonthlyMemo] = useState("");
   const [draftSpecificNote, setDraftSpecificNote] = useState("");
+  const dragStartRef = useRef(null);
+  const dragCurrentRef = useRef(null);
+  const autoPageTimerRef = useRef(null);
+  const touchHoldTimerRef = useRef(null);
+  const touchStartDateRef = useRef(null);
+  const touchOriginRef = useRef(null);
+  const suppressClickRef = useRef(false);
 
   const monthKey = useMemo(() => formatMonthKey(visibleMonth), [visibleMonth]);
   const seasonTheme = useMemo(() => getSeasonTheme(visibleMonth.getMonth()), [visibleMonth]);
@@ -132,6 +141,8 @@ function Calendar() {
     ? `${formatShortDate(normalizedRange.start)} to ${formatShortDate(normalizedRange.end)}`
     : "";
 
+  const previewRange = tempRange ?? normalizedRange;
+
   useEffect(() => {
     window.localStorage.setItem("wall-calendar-range-notes", JSON.stringify(rangeNotes));
   }, [rangeNotes]);
@@ -153,7 +164,12 @@ function Calendar() {
     setDraftSpecificNote(rangeNotes[selectedRangeKey] ?? "");
   }, [rangeNotes, selectedRangeKey]);
 
-  const handleDayClick = (date) => {
+  const handleDayClick = useCallback((date) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+
     if (!isSameMonth(date, visibleMonth)) return;
 
     if (startDate && !endDate && isSameDay(date, startDate)) {
@@ -185,12 +201,75 @@ function Calendar() {
     }
 
     setEndDate(date);
-  };
+  }, [endDate, startDate, visibleMonth]);
 
-  const changeMonth = (step) => {
+  const changeMonth = useCallback((step) => {
     setDirection(step);
     setVisibleMonth((current) => addMonths(current, step));
-  };
+  }, []);
+
+  const stopAutoPagination = useCallback(() => {
+    if (autoPageTimerRef.current) {
+      window.clearTimeout(autoPageTimerRef.current);
+      autoPageTimerRef.current = null;
+    }
+  }, []);
+
+  const stopTouchHoldTimer = useCallback(() => {
+    if (touchHoldTimerRef.current) {
+      window.clearTimeout(touchHoldTimerRef.current);
+      touchHoldTimerRef.current = null;
+    }
+  }, []);
+
+  const finalizeDragSelection = useCallback(() => {
+    stopAutoPagination();
+    stopTouchHoldTimer();
+
+    if (!dragStartRef.current) {
+      setIsDragging(false);
+      setTempRange(null);
+      touchStartDateRef.current = null;
+      touchOriginRef.current = null;
+      return;
+    }
+
+    const end = dragCurrentRef.current ?? dragStartRef.current;
+    const finalRange = normalizeRange(dragStartRef.current, end);
+
+    setStartDate(finalRange.start);
+    setEndDate(finalRange.end);
+    setIsDragging(false);
+    setTempRange(null);
+    dragStartRef.current = null;
+    dragCurrentRef.current = null;
+    touchStartDateRef.current = null;
+    touchOriginRef.current = null;
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+  }, [stopAutoPagination, stopTouchHoldTimer]);
+
+  useEffect(() => {
+    const handleMouseUp = (event) => {
+      if (event.button !== 2 || !isDragging) return;
+      finalizeDragSelection();
+    };
+
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [finalizeDragSelection, isDragging]);
+
+  useEffect(() => {
+    return () => {
+      stopAutoPagination();
+      stopTouchHoldTimer();
+    };
+  }, [stopAutoPagination, stopTouchHoldTimer]);
 
   const handleMemoChange = (value) => {
     setDraftMonthlyMemo(value);
@@ -216,7 +295,7 @@ function Calendar() {
     }));
   };
 
-  const handleWheelZoom = (event) => {
+  const handleWheelZoom = useCallback((event) => {
     if (!event.ctrlKey) return;
 
     event.preventDefault();
@@ -226,14 +305,151 @@ function Calendar() {
       const next = current + zoomDelta;
       return Math.min(200, Math.max(DEFAULT_ZOOM, next));
     });
-  };
+  }, []);
+
+  const handleMonthSelect = useCallback((monthIndex) => {
+    setDirection(monthIndex >= visibleMonth.getMonth() ? 1 : -1);
+    setVisibleMonth((current) => new Date(current.getFullYear(), monthIndex, 1));
+  }, [visibleMonth]);
+
+  const handleYearSelect = useCallback((year) => {
+    setDirection(year >= visibleMonth.getFullYear() ? 1 : -1);
+    setVisibleMonth((current) => new Date(year, current.getMonth(), 1));
+  }, [visibleMonth]);
+
+  const handleRightDragStart = useCallback((event, date) => {
+    if (event.button !== 2 || !isSameMonth(date, visibleMonth)) return;
+
+    event.preventDefault();
+    stopAutoPagination();
+    dragStartRef.current = date;
+    dragCurrentRef.current = date;
+    setIsDragging(true);
+    setTempRange(normalizeRange(date, date));
+  }, [stopAutoPagination, visibleMonth]);
+
+  const handleRightDragEnter = useCallback((date) => {
+    if (!isDragging || !dragStartRef.current || !isSameMonth(date, visibleMonth)) return;
+
+    dragCurrentRef.current = date;
+    setTempRange(normalizeRange(dragStartRef.current, date));
+  }, [isDragging, visibleMonth]);
+
+  const handleNavigationDragHover = useCallback((step) => {
+    if (!isDragging || autoPageTimerRef.current) return;
+
+    autoPageTimerRef.current = window.setTimeout(() => {
+      autoPageTimerRef.current = null;
+      changeMonth(step);
+    }, 500);
+  }, [changeMonth, isDragging]);
+
+  const handleNavigationDragLeave = useCallback(() => {
+    stopAutoPagination();
+  }, [stopAutoPagination]);
+
+  const updateDragTargetFromPoint = useCallback((clientX, clientY) => {
+    const hoveredElement = document.elementFromPoint(clientX, clientY);
+    if (!hoveredElement) {
+      stopAutoPagination();
+      return;
+    }
+
+    const navigationTarget = hoveredElement.closest("[data-calendar-nav-step]");
+    if (navigationTarget) {
+      handleNavigationDragHover(Number(navigationTarget.dataset.calendarNavStep));
+      return;
+    }
+
+    stopAutoPagination();
+
+    const dateTarget = hoveredElement.closest("[data-calendar-date]");
+    if (!dateTarget) return;
+
+    const hoveredDate = parseISODateKey(dateTarget.dataset.calendarDate);
+    if (!hoveredDate || !isSameMonth(hoveredDate, visibleMonth)) return;
+
+    dragCurrentRef.current = hoveredDate;
+    setTempRange(normalizeRange(dragStartRef.current, hoveredDate));
+  }, [handleNavigationDragHover, stopAutoPagination, visibleMonth]);
+
+  const handleDayTouchStart = useCallback((event, date) => {
+    if (!isSameMonth(date, visibleMonth) || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    stopTouchHoldTimer();
+    touchStartDateRef.current = date;
+    touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
+
+    touchHoldTimerRef.current = window.setTimeout(() => {
+      dragStartRef.current = date;
+      dragCurrentRef.current = date;
+      setIsDragging(true);
+      setTempRange(normalizeRange(date, date));
+      touchHoldTimerRef.current = null;
+      suppressClickRef.current = true;
+    }, 2000);
+  }, [stopTouchHoldTimer, visibleMonth]);
+
+  const handleTouchMove = useCallback((event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    if (!isDragging && touchHoldTimerRef.current && touchOriginRef.current) {
+      const deltaX = touch.clientX - touchOriginRef.current.x;
+      const deltaY = touch.clientY - touchOriginRef.current.y;
+      if (Math.hypot(deltaX, deltaY) > 10) {
+        stopTouchHoldTimer();
+        touchStartDateRef.current = null;
+        touchOriginRef.current = null;
+      }
+      return;
+    }
+
+    if (!isDragging || !dragStartRef.current) return;
+
+    event.preventDefault();
+    updateDragTargetFromPoint(touch.clientX, touch.clientY);
+  }, [isDragging, stopTouchHoldTimer, updateDragTargetFromPoint]);
+
+  const handleTouchEnd = useCallback(() => {
+    stopTouchHoldTimer();
+
+    if (isDragging) {
+      finalizeDragSelection();
+      return;
+    }
+
+    touchStartDateRef.current = null;
+    touchOriginRef.current = null;
+  }, [finalizeDragSelection, isDragging, stopTouchHoldTimer]);
+
+  const handleTouchCancel = useCallback(() => {
+    stopTouchHoldTimer();
+    stopAutoPagination();
+    setIsDragging(false);
+    setTempRange(null);
+    dragStartRef.current = null;
+    dragCurrentRef.current = null;
+    touchStartDateRef.current = null;
+    touchOriginRef.current = null;
+  }, [stopAutoPagination, stopTouchHoldTimer]);
 
   return (
     <section
       className="calendar-shell border-stone-200/80 bg-white/90 text-stone-800"
       onWheel={handleWheelZoom}
+      onContextMenu={(event) => {
+        if (isDragging) {
+          event.preventDefault();
+        }
+      }}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       style={{
         zoom: `${zoomLevel}%`,
+        touchAction: isDragging ? "none" : "manipulation",
       }}
     >
       <BindingRings />
@@ -254,6 +470,11 @@ function Calendar() {
             <CalendarHeader
               visibleMonth={visibleMonth}
               seasonTheme={seasonTheme}
+              isDragging={isDragging}
+              onNavigationDragHover={handleNavigationDragHover}
+              onNavigationDragLeave={handleNavigationDragLeave}
+              onMonthSelect={handleMonthSelect}
+              onYearSelect={handleYearSelect}
               onPrevious={() => changeMonth(-1)}
               onNext={() => changeMonth(1)}
             />
@@ -290,7 +511,11 @@ function Calendar() {
                     seasonTheme={seasonTheme}
                     startDate={startDate}
                     endDate={endDate}
+                    previewRange={previewRange}
                     onDayClick={handleDayClick}
+                    onDayMouseDown={handleRightDragStart}
+                    onDayMouseEnter={handleRightDragEnter}
+                    onDayTouchStart={handleDayTouchStart}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -374,20 +599,130 @@ function HeroImage({ image, month, year, quote, fact, seasonTheme }) {
   );
 }
 
-function CalendarHeader({ visibleMonth, seasonTheme, onPrevious, onNext }) {
+function CalendarHeader({
+  visibleMonth,
+  seasonTheme,
+  isDragging,
+  onNavigationDragHover,
+  onNavigationDragLeave,
+  onMonthSelect,
+  onYearSelect,
+  onPrevious,
+  onNext,
+}) {
+  const [openMenu, setOpenMenu] = useState(null);
+  const headerRef = useRef(null);
+
+  const yearOptions = useMemo(() => {
+    const centerYear = visibleMonth.getFullYear();
+    return Array.from({ length: 21 }, (_, index) => centerYear - 10 + index);
+  }, [visibleMonth]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!headerRef.current?.contains(event.target)) {
+        setOpenMenu(null);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpenMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const handleMonthPick = (monthIndex) => {
+    onMonthSelect(monthIndex);
+    setOpenMenu(null);
+  };
+
+  const handleYearPick = (year) => {
+    onYearSelect(year);
+    setOpenMenu(null);
+  };
+
   return (
-    <div className="calendar-header">
+    <div className="calendar-header" ref={headerRef}>
       <div className="calendar-header-copy">
         <p className="text-xs font-semibold uppercase tracking-[0.32em] text-stone-500">Desk view</p>
-        <h3 className="mt-2 text-2xl font-semibold text-stone-900 sm:text-3xl">
-          {MONTH_NAMES[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
-        </h3>
+        <div className="calendar-header-title-row text-2xl font-semibold text-stone-900 sm:text-3xl">
+          <div className="calendar-header-dropdown">
+            <button
+              type="button"
+              className="calendar-header-trigger"
+              onClick={() => setOpenMenu((current) => (current === "month" ? null : "month"))}
+              aria-haspopup="listbox"
+              aria-expanded={openMenu === "month"}
+            >
+              {MONTH_NAMES[visibleMonth.getMonth()]}
+            </button>
+
+            {openMenu === "month" && (
+              <div className="calendar-header-menu border-stone-200 bg-white/95 shadow-xl shadow-stone-950/10">
+                {MONTH_NAMES.map((monthName, index) => (
+                  <button
+                    key={monthName}
+                    type="button"
+                    className={`calendar-header-menu-item ${
+                      index === visibleMonth.getMonth() ? "is-active" : ""
+                    }`}
+                    onClick={() => handleMonthPick(index)}
+                  >
+                    {monthName}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="calendar-header-dropdown">
+            <button
+              type="button"
+              className="calendar-header-trigger"
+              onClick={() => setOpenMenu((current) => (current === "year" ? null : "year"))}
+              aria-haspopup="listbox"
+              aria-expanded={openMenu === "year"}
+            >
+              {visibleMonth.getFullYear()}
+            </button>
+
+            {openMenu === "year" && (
+              <div className="calendar-header-menu calendar-header-year-menu border-stone-200 bg-white/95 shadow-xl shadow-stone-950/10">
+                {yearOptions.map((year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    className={`calendar-header-menu-item ${
+                      year === visibleMonth.getFullYear() ? "is-active" : ""
+                    }`}
+                    onClick={() => handleYearPick(year)}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="calendar-header-actions">
         <button
           type="button"
           onClick={onPrevious}
+          onMouseEnter={() => onNavigationDragHover(-1)}
+          onMouseLeave={onNavigationDragLeave}
+          onContextMenu={(event) => event.preventDefault()}
+          data-calendar-nav-step="-1"
           className="calendar-header-button border-stone-200 bg-white text-stone-700 hover:-translate-y-0.5 hover:border-stone-300 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
           style={{ "--tw-ring-color": seasonTheme.accent }}
           aria-label="Go to previous month"
@@ -397,6 +732,10 @@ function CalendarHeader({ visibleMonth, seasonTheme, onPrevious, onNext }) {
         <button
           type="button"
           onClick={onNext}
+          onMouseEnter={() => onNavigationDragHover(1)}
+          onMouseLeave={onNavigationDragLeave}
+          onContextMenu={(event) => event.preventDefault()}
+          data-calendar-nav-step="1"
           className="calendar-header-button border-stone-200 bg-white text-stone-700 hover:-translate-y-0.5 hover:border-stone-300 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
           style={{ "--tw-ring-color": seasonTheme.accent }}
           aria-label="Go to next month"
@@ -404,6 +743,12 @@ function CalendarHeader({ visibleMonth, seasonTheme, onPrevious, onNext }) {
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
+
+      {isDragging && (
+        <p className="calendar-header-drag-hint text-xs text-stone-500">
+          Right-drag, or long-press for 2 seconds on touch, then hover the arrows briefly to continue into another month.
+        </p>
+      )}
     </div>
   );
 }
@@ -459,6 +804,15 @@ function toISODate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
     date.getDate()
   ).padStart(2, "0")}`;
+}
+
+function parseISODateKey(value) {
+  if (!value) return null;
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(year, month - 1, day);
 }
 
 function formatShortDate(date) {

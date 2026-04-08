@@ -101,7 +101,7 @@ function NotesSidebar({
             <h5 className="text-lg font-semibold text-stone-900">Select a range to add notes</h5>
             <p className="mt-2 max-w-sm text-sm leading-6 text-stone-600">
               Tap a start day and then an end day. The calendar will highlight the span and store
-              your note against that exact range.
+              your note.
             </p>
           </div>
         )}

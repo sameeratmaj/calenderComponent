@@ -43,15 +43,15 @@
   inset-inline: 0;
   top: 1rem;
   z-index: 10;
-  display: none;
+  display: flex;
   justify-content: center;
-  gap: 0.75rem;
-  padding-inline: 2rem;
+  gap: 0.4rem;
+  padding-inline: 1rem;
 }
 
 .calendar-binding-ring {
-  width: 0.75rem;
-  height: 1.5rem;
+  width: 0.5rem;
+  height: 1rem;
   border-width: 2px;
   border-style: solid;
   border-radius: 9999px;
@@ -178,11 +178,88 @@
   padding-top: 0.5rem;
 }
 
+.calendar-header-title-row {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar-header-dropdown {
+  position: relative;
+}
+
+.calendar-header-trigger {
+  display: inline;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+}
+
+.calendar-header-trigger:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 0.2rem;
+  border-radius: 0.3rem;
+}
+
+.calendar-header-menu {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 12rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 1rem;
+  padding: 0.4rem;
+  backdrop-filter: blur(12px);
+}
+
+.calendar-header-year-menu {
+  min-width: 7rem;
+}
+
+.calendar-header-menu-item {
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #44403c;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.calendar-header-menu-item:hover {
+  background: rgba(231, 229, 228, 0.8);
+  color: #1c1917;
+  transform: translateY(-1px);
+}
+
+.calendar-header-menu-item.is-active {
+  background: rgba(245, 245, 244, 0.95);
+  color: #0c0a09;
+  font-weight: 600;
+}
+
 .calendar-header-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   align-self: flex-start;
+}
+
+.calendar-header-drag-hint {
+  margin-top: -0.25rem;
 }
 
 .calendar-header-button {
@@ -208,12 +285,18 @@
     padding: 1.5rem;
   }
 
-  .calendar-binding {
-    display: flex;
-  }
-
   .calendar-hero {
     min-height: 860px;
+  }
+
+  .calendar-binding {
+    gap: 0.75rem;
+    padding-inline: 2rem;
+  }
+
+  .calendar-binding-ring {
+    width: 0.75rem;
+    height: 1.5rem;
   }
 
   .calendar-hero-ribbon {
@@ -251,8 +334,16 @@
     padding-top: 0.75rem;
   }
 
+  .calendar-header-title-row {
+    margin-top: 0.75rem;
+  }
+
   .calendar-header-actions {
     align-self: auto;
+  }
+
+  .calendar-header-drag-hint {
+    display: none;
   }
 }
 
